@@ -35,7 +35,7 @@ def crossover(parent1, parent2):
     return Tour(child_cities)
 
 class GeneticAlgorithm:
-    def __init__(self, cities, population_size=100, elite_size=20, mutation_rate=0.00, generations=1500):
+    def __init__(self, cities, population_size=100, elite_size=20, mutation_rate=0.00, generations=200):
         self.cities = cities
         self.population_size = population_size
         self.elite_size = elite_size
