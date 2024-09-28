@@ -1,6 +1,7 @@
 import json
 import random
 import math
+import matplotlib.pyplot as plt
 
 class City:
     def __init__(self, x, y):
@@ -76,36 +77,55 @@ class GeneticAlgorithm:
 
     def run(self):
         population = self.initial_population()
+        best_distances = []
         for i in range(self.generations):
             population = self.next_generation(population)
             best_tour = min(population, key=lambda x: x.distance)
+            best_distances.append(best_tour.distance)
             if i % 10 == 0:
                 print(f"Generation {i+1}: Best distance = {best_tour.distance:.2f}")
-        return best_tour
+        return best_tour, best_distances
 
 def load_examples(filename="tsp_examples.json"):
     with open(filename, "r") as f:
         return json.load(f)
 
-def run_genetic_algorithm(cities):
-    ga = GeneticAlgorithm(cities, mutation_rate=0.05)
-    best_tour = ga.run()
-    return best_tour
+def run_genetic_algorithm(cities, mutation_rate):
+    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate)
+    best_tour, best_distances = ga.run()
+    return best_tour, best_distances
+
+def plot_results(mutation_rates, results):
+    for mutation_rate, distances in results.items():
+        plt.plot(distances, label=f'Mutation Rate: {mutation_rate}')
+    plt.title('Best Tour Distance Over Generations')
+    plt.xlabel('Generation')
+    plt.ylabel('Best Tour Distance')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 if __name__ == "__main__":
     # Load examples
     examples = load_examples()
-    
-    # Run the genetic algorithm for each example
+    mutation_rates = [0, 0.01, 0.1]
+    results = {}
+
+    # Run the genetic algorithm for each example and mutation rate
     for i, example in enumerate(examples):
         print(f"\nRunning example {i+1}")
         cities = [City(city['x'], city['y']) for city in example]
-        best_tour = run_genetic_algorithm(cities)
-        
-        print(f"Example {i+1} results:")
-        print(f"Number of cities: {len(cities)}")
-        print(f"Best tour distance: {best_tour.distance:.2f}")
-        # print("Best tour:")
-        # for city in best_tour.cities:
-        #     print(f"({city.x}, {city.y})")
-        print("-" * 40)
+
+        # Store results for each mutation rate
+        for mutation_rate in mutation_rates:
+            print(f"  Running with mutation rate: {mutation_rate}")
+            best_tour, best_distances = run_genetic_algorithm(cities, mutation_rate)
+            results[mutation_rate] = best_distances
+
+            print(f"  Example {i+1} results:")
+            print(f"  Number of cities: {len(cities)}")
+            print(f"  Best tour distance: {best_tour.distance:.2f}")
+            print("-" * 40)
+
+    # Plot results
+    plot_results(mutation_rates, results)

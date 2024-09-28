@@ -21,7 +21,7 @@ def save_examples(examples, filename="tsp_examples.json"):
         json.dump(examples, f, indent=2)
 
 if __name__ == "__main__":
-    examples = generate_examples(num_examples=1, min_cities=100, max_cities=100)
+    examples = generate_examples(num_examples=1, min_cities=20, max_cities=20)
     save_examples(examples)
     print(f"Generated 10 TSP examples and saved them to tsp_examples.json")
     
