@@ -27,7 +27,6 @@ class Tour:
         self.cities[i], self.cities[j] = self.cities[j], self.cities[i]
         self.distance = self.calculate_distance()
 
-
 def create_random_tour(cities):
     return Tour(random.sample(cities, len(cities)))
 
@@ -46,6 +45,8 @@ class GeneticAlgorithm:
         self.mutation_rate = mutation_rate
         self.generations = generations
         self.simulator = QuantumCircuitSimulator(mutation_rate)
+        self.mutation_events = []  # Track mutation events
+        self.gen_counter = 0
 
     def initial_population(self):
         return [create_random_tour(self.cities) for _ in range(self.population_size)]
@@ -67,19 +68,22 @@ class GeneticAlgorithm:
             children.append(crossover(parent1, parent2))
         return children
 
-    def mutate_population(self, population):
+    def mutate_population(self, population, generation):
         global counter
         for tour in population[self.elite_size:]:
             counter += 1
             if self.simulator.mutation_occured():
                 tour.mutate()
+                best_fitness = min(population, key=lambda x: x.distance).distance
+                self.mutation_events.append((generation, best_fitness))  # Track generation and best fitness
         return population
 
     def next_generation(self, current_gen):
         ranked_tours = self.rank_tours(current_gen)
         selection_results = self.selection(ranked_tours)
         children = self.breed_population(selection_results)
-        next_generation = self.mutate_population(children)
+        next_generation = self.mutate_population(children, self.gen_counter)  # Pass current generation index
+        self.gen_counter+=1
         return next_generation
 
     def run(self):
@@ -98,13 +102,15 @@ def load_examples(filename="tsp_examples.json"):
         return json.load(f)
 
 def run_genetic_algorithm(cities, mutation_rate):
-    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, population_size=30, generations=300)
+    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, elite_size=3, population_size=10, generations=1000)
     best_tour, best_distances = ga.run()
-    return best_tour, best_distances
+    return best_tour, best_distances, ga.mutation_events
 
 def plot_results(mutation_rates, results):
-    for mutation_rate, distances in results.items():
+    for mutation_rate, (distances, mutation_events) in results.items():
         plt.plot(distances, label=f'Mutation Rate: {mutation_rate}')
+        for generation, fitness in mutation_events:
+            plt.plot(generation, fitness, 'ro')  # Red dots for mutation events at correct coordinates
     plt.title('Best Tour Distance Over Generations')
     plt.xlabel('Generation')
     plt.ylabel('Best Tour Distance')
@@ -126,8 +132,8 @@ if __name__ == "__main__":
         # Store results for each mutation rate
         for mutation_rate in mutation_rates:
             print(f"  Running with mutation rate: {mutation_rate}")
-            best_tour, best_distances = run_genetic_algorithm(cities, mutation_rate)
-            results[mutation_rate] = best_distances
+            best_tour, best_distances, mutation_events = run_genetic_algorithm(cities, mutation_rate)
+            results[mutation_rate] = (best_distances, mutation_events)
 
             print(f"  Example {i+1} results:")
             print(f"  Number of cities: {len(cities)}")
@@ -137,5 +143,5 @@ if __name__ == "__main__":
     # Plot results
     plot_results(mutation_rates, results)
     print(f"Total mutations: {counter}")
-    #wait
+    # Wait
     input("Press Enter to continue...")
