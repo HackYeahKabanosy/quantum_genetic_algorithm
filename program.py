@@ -98,7 +98,7 @@ def load_examples(filename="tsp_examples.json"):
         return json.load(f)
 
 def run_genetic_algorithm(cities, mutation_rate):
-    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate)
+    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, population_size=30, generations=300)
     best_tour, best_distances = ga.run()
     return best_tour, best_distances
 
