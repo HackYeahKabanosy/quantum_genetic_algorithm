@@ -2,7 +2,8 @@ import json
 import random
 import math
 import matplotlib.pyplot as plt
-
+import numpy as np
+import gradio as gr
 from quantum import QuantumCircuitSimulator
 
 class City:
@@ -36,7 +37,6 @@ def crossover(parent1, parent2):
     child_cities += [city for city in parent2.cities if city not in child_cities]
     return Tour(child_cities)
 
-counter = 0
 class GeneticAlgorithm:
     def __init__(self, cities, population_size=100, elite_size=20, mutation_rate=0.01, generations=200):
         self.cities = cities
@@ -69,9 +69,7 @@ class GeneticAlgorithm:
         return children
 
     def mutate_population(self, population, generation):
-        global counter
         for tour in population[self.elite_size:]:
-            counter += 1
             if self.simulator.mutation_occured():
                 tour.mutate()
                 best_fitness = min(population, key=lambda x: x.distance).distance
@@ -83,7 +81,7 @@ class GeneticAlgorithm:
         selection_results = self.selection(ranked_tours)
         children = self.breed_population(selection_results)
         next_generation = self.mutate_population(children, self.gen_counter)  # Pass current generation index
-        self.gen_counter+=1
+        self.gen_counter += 1
         return next_generation
 
     def run(self):
@@ -93,55 +91,57 @@ class GeneticAlgorithm:
             population = self.next_generation(population)
             best_tour = min(population, key=lambda x: x.distance)
             best_distances.append(best_tour.distance)
-            if i % 10 == 0:
-                print(f"Generation {i+1}: Best distance = {best_tour.distance:.2f}")
-        return best_tour, best_distances
+        return best_distances
 
 def load_examples(filename="tsp_examples.json"):
     with open(filename, "r") as f:
         return json.load(f)
 
-def run_genetic_algorithm(cities, mutation_rate):
-    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, elite_size=3, population_size=10, generations=1000)
-    best_tour, best_distances = ga.run()
-    return best_tour, best_distances, ga.mutation_events
+def run_genetic_algorithm(cities, population_size, elite_size, mutation_rate, generations):
+    ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, elite_size=elite_size, population_size=population_size, generations=generations)
+    best_distances = ga.run()
+    return best_distances
 
-def plot_results(mutation_rates, results):
-    for mutation_rate, (distances, mutation_events) in results.items():
-        plt.plot(distances, label=f'Mutation Rate: {mutation_rate}')
-        for generation, fitness in mutation_events:
-            plt.plot(generation, fitness, 'ro')  # Red dots for mutation events at correct coordinates
+def plot_results(best_distances):
+    plt.figure(figsize=(10, 5))
+    plt.plot(best_distances, label='Best Tour Distance')
     plt.title('Best Tour Distance Over Generations')
     plt.xlabel('Generation')
     plt.ylabel('Best Tour Distance')
     plt.legend()
     plt.grid()
-    plt.show()
+    plt.tight_layout()
+    
+    # Save the plot to a file and return the file path
+    plot_file_path = "best_tour_distance_plot.png"
+    plt.savefig(plot_file_path)
+    plt.close()  # Close the plot to free memory
+    return plot_file_path
+
+def run_app(population_size, elite_size, mutation_rate, generations):
+    examples = load_examples()
+    results = []
+
+    for i, example in enumerate(examples):
+        cities = [City(city['x'], city['y']) for city in example]
+        best_distances = run_genetic_algorithm(cities, population_size, elite_size, mutation_rate, generations)
+        results.append(best_distances)
+
+    # Plot results for the last example and return the plot image path
+    return plot_results(results[-1])
+
+iface = gr.Interface(
+    fn=run_app,
+    inputs=[
+        gr.Slider(10, 100, label="Population Size", step=1),
+        gr.Slider(5, 50, label="Elite Size" , step=1),
+        gr.Slider(0.0, 0.5, step=0.01, label="Mutation Rate"),
+        gr.Slider(10, 1000, label="Generations", step=1)
+    ],
+    outputs=gr.Image(type="filepath"),
+    title="Genetic Algorithm TSP Solver",
+    description="Adjust the parameters to customize the Genetic Algorithm for solving the Traveling Salesman Problem."
+)
 
 if __name__ == "__main__":
-    # Load examples
-    examples = load_examples()
-    mutation_rates = [0, 0.01, 0.1]
-    results = {}
-
-    # Run the genetic algorithm for each example and mutation rate
-    for i, example in enumerate(examples):
-        print(f"\nRunning example {i+1}")
-        cities = [City(city['x'], city['y']) for city in example]
-
-        # Store results for each mutation rate
-        for mutation_rate in mutation_rates:
-            print(f"  Running with mutation rate: {mutation_rate}")
-            best_tour, best_distances, mutation_events = run_genetic_algorithm(cities, mutation_rate)
-            results[mutation_rate] = (best_distances, mutation_events)
-
-            print(f"  Example {i+1} results:")
-            print(f"  Number of cities: {len(cities)}")
-            print(f"  Best tour distance: {best_tour.distance:.2f}")
-            print("-" * 40)
-
-    # Plot results
-    plot_results(mutation_rates, results)
-    print(f"Total mutations: {counter}")
-    # Wait
-    input("Press Enter to continue...")
+    iface.launch()
