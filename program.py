@@ -136,3 +136,6 @@ if __name__ == "__main__":
 
     # Plot results
     plot_results(mutation_rates, results)
+    print(f"Total mutations: {counter}")
+    #wait
+    input("Press Enter to continue...")
