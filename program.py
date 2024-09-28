@@ -3,6 +3,8 @@ import random
 import math
 import matplotlib.pyplot as plt
 
+from quantum import QuantumCircuitSimulator
+
 class City:
     def __init__(self, x, y):
         self.x = x
@@ -25,6 +27,7 @@ class Tour:
         self.cities[i], self.cities[j] = self.cities[j], self.cities[i]
         self.distance = self.calculate_distance()
 
+
 def create_random_tour(cities):
     return Tour(random.sample(cities, len(cities)))
 
@@ -34,13 +37,15 @@ def crossover(parent1, parent2):
     child_cities += [city for city in parent2.cities if city not in child_cities]
     return Tour(child_cities)
 
+counter = 0
 class GeneticAlgorithm:
-    def __init__(self, cities, population_size=100, elite_size=20, mutation_rate=0.00, generations=200):
+    def __init__(self, cities, population_size=100, elite_size=20, mutation_rate=0.01, generations=200):
         self.cities = cities
         self.population_size = population_size
         self.elite_size = elite_size
         self.mutation_rate = mutation_rate
         self.generations = generations
+        self.simulator = QuantumCircuitSimulator(mutation_rate)
 
     def initial_population(self):
         return [create_random_tour(self.cities) for _ in range(self.population_size)]
@@ -63,8 +68,10 @@ class GeneticAlgorithm:
         return children
 
     def mutate_population(self, population):
+        global counter
         for tour in population[self.elite_size:]:
-            if random.random() < self.mutation_rate:
+            counter += 1
+            if self.simulator.mutation_occured():
                 tour.mutate()
         return population
 
