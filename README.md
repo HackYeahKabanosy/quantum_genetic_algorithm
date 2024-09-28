@@ -1,3 +1,3 @@
 # quantum_genetic_algorithm
 
-Lerigo
+add the instructions here
