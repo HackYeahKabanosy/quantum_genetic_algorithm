@@ -76,5 +76,6 @@ We also created a platform where you can simulate how this algorithm would work 
 
 ```
 git clone git@github.com:HackYeahKabanosy/quantum_genetic_algorithm.git
-
+pip install -r requirement.txt
+python program.py
 ```
