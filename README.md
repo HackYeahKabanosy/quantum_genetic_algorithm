@@ -1,5 +1,8 @@
-# Quantum Voyager Algorithm
-Solving traveling salesman problem with Genetic Algorithms and Quantum Computing
+## Quantum Voyager Algorithm
+
+#### Solving travelling salesman problem with Genetic Algorithms and Quantum Computing
+
+Cybersecurity challange on HackYeah2024
 
 ![QuantumVoyagePlatform](https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/QuantumVoyagePlatform.gif)
 
@@ -12,7 +15,7 @@ Find the best path covering all the cities/points without repeating any. This ta
 
 2. Solutions change with each new generation, mixing and creating potentially better solutions
 
-3. But they often get stuck at some point , and no longer improve in new generations
+3. But they can get stuck in a local minimum, and no longer improve in new generations
 
 <img src="https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/qv2.png" width="400">
 
@@ -24,10 +27,18 @@ Find the best path covering all the cities/points without repeating any. This ta
 <img src="https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/chartMutation.png" width="400">
  
 ### How to apply Quantum Computing to enhance it?
-We can make use of noise from quantum computing operations.
-A gate we use has only two possible outputs: [00, 11]. But on quantum computers it can generate some unexpected outputs.
 
-<img src="https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/gate.png" width="400">
+#### Quantum Computers
+- uses quantum bits that represent probability between 0 and 1
+- operates on circuits consisting of quantum gates
+- generates noise, unexpected outcomes, as a side-effect
+
+#### Noise
+Noise is a side-effect, something unexpected, outcome that “shouldn’t be possible”.
+Even though we can make use of it! 
+For example a gate below has only two possible outputs: [00, 11]. But on quantum computers it can generate some unexpected outputs.
+
+<img src="https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/gate.png" width="600">
 
 ```
 # create a Quantum Circuit with 2 qubits and 2 classical bits 
@@ -39,10 +50,31 @@ qc.cx(0, 1)
 # measure the qubits 
 qc.measure([0, 1], [0, 1])
 ```
+
+#### Outcome
+
+Outcome per 1024 shots on a  real quantum computer (on non-quantum computer, 0010 or 0001 would never occur)
+
 <img src="https://github.com/HackYeahKabanosy/quantum_genetic_algorithm/blob/main/docs/chartNoise.png" width="400">
+
+Similarly to mutation, it’s an unepxected change that happens randomly.
+It’s possible to be received with different frequency, depending on a quantum machine and conditions.
+
+```
+# if anomaly occurs, then apply mutation
+def should_apply_mutation():
+  res = self.qiskit_runtime.run(shots=1)
+  return 
+    res.get('01', 0) > 0 
+    or 
+    res.get('10', 0) > 0
+```
 
 ### How to play with Quantum Voyager?
 
+We also created a platform where you can simulate how this algorithm would work on a quantum computer with a given noise level.
+
 ```
-todo
+git clone git@github.com:HackYeahKabanosy/quantum_genetic_algorithm.git
+
 ```
