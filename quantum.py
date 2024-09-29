@@ -1,7 +1,7 @@
 from qiskit import QuantumCircuit, transpile, assemble
 from qiskit_aer.noise import NoiseModel, depolarizing_error
 from qiskit_aer import AerSimulator
-
+from qiskit_ibm_runtime import QiskitRuntimeService
 
 class QuantumCircuitSimulator:
     def __init__(self, error_prob=0.01):
@@ -33,9 +33,14 @@ class QuantumCircuitSimulator:
         execution_result = self.run(shots=1)
         return execution_result.get('01', 0) > 0 or execution_result.get('10', 0) > 0
 
-    def run(self, shots=1000):
+    def run(self, shots=1000, simulator=True, api_token="token"):
         # Execute the circuit on the noisy qasm simulator
-        result = self.simulator.run(self.qc, noise_model=self.noise_model, shots=shots).result()
+        if (simulator):
+            result = self.simulator.run(self.qc, noise_model=self.noise_model, shots=shots).result()
+        else:
+            service = QiskitRuntimeService(channel="ibm_quantum", token=api_token)
+            backend = service.least_busy(operational=True, simulator=False)
+            result = backend.run(self.qc, shots=shots).result()
         # Get the counts (measurement results)
         counts = result.get_counts(self.qc)
         return counts
