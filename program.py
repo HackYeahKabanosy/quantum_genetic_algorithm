@@ -2,6 +2,7 @@ import json
 import random
 import math
 import matplotlib.pyplot as plt
+import imageio
 import numpy as np
 import gradio as gr
 from quantum import QuantumCircuitSimulator
@@ -24,8 +25,11 @@ class Tour:
         return total_distance
 
     def mutate(self):
-        i, j = random.sample(range(len(self.cities)), 2)
-        self.cities[i], self.cities[j] = self.cities[j], self.cities[i]
+        """Mutates the tour by swapping random cities a number of times based on the size of the tour."""
+        num_mutations = random.randint(1, max(1, len(self.cities) // 10))  # At least 1 mutation
+        for _ in range(num_mutations):
+            i, j = random.sample(range(len(self.cities)), 2)
+            self.cities[i], self.cities[j] = self.cities[j], self.cities[i]
         self.distance = self.calculate_distance()
 
 def create_random_tour(cities):
@@ -45,8 +49,9 @@ class GeneticAlgorithm:
         self.mutation_rate = mutation_rate
         self.generations = generations
         self.simulator = QuantumCircuitSimulator(mutation_rate)
-        self.mutation_events = []  # Track mutation events
+        self.mutation_events = []
         self.gen_counter = 0
+        self.frames = []
 
     def initial_population(self):
         return [create_random_tour(self.cities) for _ in range(self.population_size)]
@@ -73,14 +78,14 @@ class GeneticAlgorithm:
             if self.simulator.mutation_occured():
                 tour.mutate()
                 best_fitness = min(population, key=lambda x: x.distance).distance
-                self.mutation_events.append((generation, best_fitness))  # Track generation and best fitness
+                self.mutation_events.append((generation, best_fitness))
         return population
 
     def next_generation(self, current_gen):
         ranked_tours = self.rank_tours(current_gen)
         selection_results = self.selection(ranked_tours)
         children = self.breed_population(selection_results)
-        next_generation = self.mutate_population(children, self.gen_counter)  # Pass current generation index
+        next_generation = self.mutate_population(children, self.gen_counter)
         self.gen_counter += 1
         return next_generation
 
@@ -91,16 +96,45 @@ class GeneticAlgorithm:
             population = self.next_generation(population)
             best_tour = min(population, key=lambda x: x.distance)
             best_distances.append(best_tour.distance)
+            self.frames.append((best_tour.cities, i))
         return best_distances
 
 def load_examples(filename="tsp_examples.json"):
     with open(filename, "r") as f:
         return json.load(f)
 
+def plot_tour(cities, generation):
+    plt.figure(figsize=(8, 5))
+    x = [city.x for city in cities]
+    y = [city.y for city in cities]
+    plt.plot(x + [cities[0].x], y + [cities[0].y], 'o-')
+    plt.title(f'Tour at Generation {generation}')
+    plt.xlim(min(x) - 1, max(x) + 1)
+    plt.ylim(min(y) - 1, max(y) + 1)
+    plt.grid()
+    plt.axis('equal')
+    
+    frame_path = f"frame_{generation}.png"
+    plt.savefig(frame_path)
+    plt.close()
+    return frame_path
+
+def create_gif(frames, repeat_frames=5):
+    """Creates a GIF and repeats each frame multiple times to slow down the playback."""
+    gif_path = "genetic_algorithm_progress.gif"
+    with imageio.get_writer(gif_path, mode='I', duration=0.2, loop=0) as writer:  # Adjust base frame duration
+        for cities, generation in frames:
+            frame_path = plot_tour(cities, generation)
+            image = imageio.imread(frame_path)
+            for _ in range(repeat_frames):  # Repeat each frame multiple times
+                writer.append_data(image)
+    return gif_path
+
 def run_genetic_algorithm(cities, population_size, elite_size, mutation_rate, generations):
     ga = GeneticAlgorithm(cities, mutation_rate=mutation_rate, elite_size=elite_size, population_size=population_size, generations=generations)
     best_distances = ga.run()
-    return best_distances
+    gif_path = create_gif(ga.frames, repeat_frames=5)  # Repeat each frame 5 times
+    return best_distances, gif_path
 
 def plot_results(best_distances):
     plt.figure(figsize=(10, 5))
@@ -112,11 +146,10 @@ def plot_results(best_distances):
     plt.grid()
     plt.tight_layout()
     
-    # Save the plot to a file and return the file path
-    plot_file_path = "best_tour_distance_plot.png"
-    plt.savefig(plot_file_path)
-    plt.close()  # Close the plot to free memory
-    return plot_file_path
+    chart_path = "best_tour_distance_plot.png"
+    plt.savefig(chart_path)
+    plt.close()
+    return chart_path
 
 def run_app(population_size, elite_size, mutation_rate, generations):
     examples = load_examples()
@@ -124,21 +157,24 @@ def run_app(population_size, elite_size, mutation_rate, generations):
 
     for i, example in enumerate(examples):
         cities = [City(city['x'], city['y']) for city in example]
-        best_distances = run_genetic_algorithm(cities, population_size, elite_size, mutation_rate, generations)
-        results.append(best_distances)
+        best_distances, gif_path = run_genetic_algorithm(cities, population_size, elite_size, mutation_rate, generations)
+        chart_path = plot_results(best_distances)
+        results.append((chart_path, gif_path))
 
-    # Plot results for the last example and return the plot image path
-    return plot_results(results[-1])
+    return results[-1]
 
 iface = gr.Interface(
     fn=run_app,
     inputs=[
-        gr.Slider(10, 100, label="Population Size", step=1),
-        gr.Slider(5, 50, label="Elite Size" , step=1),
+        gr.Slider(10, 100, step=1, label="Population Size"),
+        gr.Slider(5, 50, step=1, label="Elite Size"),
         gr.Slider(0.0, 0.5, step=0.01, label="Mutation Rate"),
-        gr.Slider(10, 1000, label="Generations", step=1)
+        gr.Slider(10, 1000, step=1, label="Generations")
     ],
-    outputs=gr.Image(type="filepath"),
+    outputs=[
+        gr.Image(type="filepath", label="Best Tour Distance Plot"),
+        gr.Image(type="filepath", label="Progress GIF")
+    ],
     title="Genetic Algorithm TSP Solver",
     description="Adjust the parameters to customize the Genetic Algorithm for solving the Traveling Salesman Problem."
 )
